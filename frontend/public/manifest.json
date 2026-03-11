@@ -1,9 +1,16 @@
 {
-  "short_name": "Text Reader",
-  "name": "Text Reader for Visually Impaired",
-  "icons": [],
+  "short_name": "OCO-NO",
+  "name": "OCO-NO - Lector de Texto Accesible",
+  "icons": [
+    {
+      "src": "ocono.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "description": "Aplicación de lectura de texto para personas con discapacidad visual"
 }

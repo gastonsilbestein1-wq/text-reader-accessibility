@@ -24,9 +24,9 @@ npm install
 # 2. Instalar dependencias de las lambdas
 echo -e "\n${BLUE}📦 Instalando dependencias de Lambda...${NC}"
 cd lambda/process-image
-pip install -r requirements.txt -t .
+pip3 install -r requirements.txt -t . 2>/dev/null || pip install -r requirements.txt -t . 2>/dev/null || echo "Skipping pip install (boto3 available in Lambda runtime)"
 cd ../text-to-speech
-pip install -r requirements.txt -t .
+pip3 install -r requirements.txt -t . 2>/dev/null || pip install -r requirements.txt -t . 2>/dev/null || echo "Skipping pip install (boto3 available in Lambda runtime)"
 cd ../..
 
 # 3. Build del frontend

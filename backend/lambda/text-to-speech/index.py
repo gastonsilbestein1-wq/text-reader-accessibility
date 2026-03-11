@@ -9,7 +9,6 @@ s3 = boto3.client('s3')
 # Mapeo de idiomas a voces de Polly
 VOICE_MAP = {
     'en': {'VoiceId': 'Joanna', 'LanguageCode': 'en-US'},
-    'es': {'VoiceId': 'Lucia', 'LanguageCode': 'es-ES'},
     'es-MX': {'VoiceId': 'Mia', 'LanguageCode': 'es-MX'}
 }
 

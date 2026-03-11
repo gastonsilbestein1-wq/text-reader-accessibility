@@ -4,7 +4,9 @@
   "scripts": {
     "build": "tsc",
     "deploy": "cdk deploy",
-    "synth": "cdk synth"
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "destroy": "cdk destroy"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.120.0",
