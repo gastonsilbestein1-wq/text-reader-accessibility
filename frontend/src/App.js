@@ -52,6 +52,8 @@ function App() {
   };
 
   const captureImage = () => {
+    if (!cameraReady || capturing) return;
+    
     setCapturing(true);
     
     const canvas = canvasRef.current;
@@ -151,15 +153,18 @@ function App() {
       
       setExtractedText(data.text);
       setImageQuality('good');
+      
+      // Automáticamente generar y reproducir audio
+      await speakText(data.text);
     } catch (err) {
       alert(t.processError);
+      setLoading(false);
+      setLoadingMessage('');
     }
-    setLoading(false);
-    setLoadingMessage('');
   };
 
-  const speakText = async () => {
-    setLoading(true);
+  const speakText = async (textToSpeak = null) => {
+    const text = textToSpeak || extractedText;
     setLoadingMessage(t.generatingAudio);
     
     try {
@@ -167,7 +172,7 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          text: extractedText,
+          text: text,
           language: language
         })
       });
@@ -203,34 +208,41 @@ function App() {
           <img src="/ocono.png" alt="OCO-NO Logo" className="logo" />
         </div>
         
-        <div className="language-selector">
-          <button 
-            onClick={() => setLanguage('en')} 
-            className={language === 'en' ? 'active' : ''}
-            aria-label="English"
-          >
-            English
-          </button>
-          <button 
-            onClick={() => setLanguage('es-MX')} 
-            className={language === 'es-MX' ? 'active' : ''}
-            aria-label="Español Latino"
-          >
-            Español Latino
-          </button>
+        <div className="language-toggle">
+          <span className={language === 'es-MX' ? 'active' : ''}>Español</span>
+          <label className="switch">
+            <input 
+              type="checkbox" 
+              checked={language === 'en'}
+              onChange={() => setLanguage(language === 'en' ? 'es-MX' : 'en')}
+              aria-label="Cambiar idioma"
+            />
+            <span className="slider"></span>
+          </label>
+          <span className={language === 'en' ? 'active' : ''}>English</span>
         </div>
 
-        <div className={`camera-container ${capturing ? 'capturing' : ''}`}>
+        <div 
+          className={`camera-container ${capturing ? 'capturing' : ''}`}
+          onClick={!capturedImage ? captureImage : null}
+          style={{ cursor: !capturedImage && cameraReady ? 'pointer' : 'default' }}
+        >
           <video 
             ref={videoRef} 
             autoPlay 
             playsInline 
             style={{ display: capturedImage ? 'none' : 'block' }}
-            aria-label="Vista de cámara"
+            aria-label="Vista de cámara - Toca para capturar"
           />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           {capturedImage && <img src={capturedImage} alt="Foto capturada" />}
           {capturing && <div className="flash-overlay"></div>}
+          {!capturedImage && cameraReady && (
+            <div className="tap-hint">
+              <span>📸</span>
+              <p>Toca para capturar</p>
+            </div>
+          )}
         </div>
 
         {imageQuality === 'low' && (
@@ -282,46 +294,26 @@ function App() {
           )}
         </div>
 
-        {loading && loadingMessage && (
-          <div className="loading-indicator" role="status" aria-live="polite">
-            <div className="progress-bar">
-              <div className="progress-fill"></div>
-            </div>
-            <p>{loadingMessage}</p>
-          </div>
-        )}
-
         {extractedText && (
           <div className="text-result">
-            <div className="audio-controls-top">
-              <button 
-                onClick={speakText} 
-                disabled={loading} 
-                className="btn-speak-large"
-                aria-label={t.listen}
-              >
-                {loading && audioUrl === null ? (
-                  <>
-                    <span className="spinner"></span>
-                    <span>{loadingMessage}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="btn-icon-large">🔊</span>
-                    <span className="btn-text-large">{t.listen}</span>
-                  </>
-                )}
-              </button>
-              
-              {audioUrl && (
+            {loading && !audioUrl && (
+              <div className="audio-loading">
+                <span className="spinner"></span>
+                <span>{loadingMessage}</span>
+              </div>
+            )}
+            
+            {audioUrl && (
+              <div className="audio-controls-top">
                 <audio 
                   ref={audioRef} 
                   controls 
                   className="audio-player-large"
                   aria-label="Reproductor de audio"
+                  autoPlay
                 />
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="text-content">
               <h2>{t.extractedText}</h2>
