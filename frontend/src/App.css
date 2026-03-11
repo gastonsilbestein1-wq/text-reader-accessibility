@@ -1,0 +1,160 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  color: #667eea;
+  margin-bottom: 20px;
+  font-size: 2rem;
+}
+
+.language-selector {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.language-selector button {
+  padding: 10px 20px;
+  border: 2px solid #667eea;
+  background: white;
+  color: #667eea;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.language-selector button.active {
+  background: #667eea;
+  color: white;
+}
+
+.camera-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 20px;
+  border-radius: 15px;
+  overflow: hidden;
+  background: #f0f0f0;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-container video,
+.camera-container img {
+  width: 100%;
+  height: auto;
+}
+
+.controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+}
+
+.btn-speak {
+  background: #4CAF50;
+  color: white;
+  margin-top: 15px;
+}
+
+.btn-speak:hover:not(:disabled) {
+  background: #45a049;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.text-result {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 15px;
+  text-align: left;
+}
+
+.text-result h2 {
+  color: #667eea;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.text-result p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+audio {
+  width: 100%;
+  max-width: 500px;
+  margin: 20px auto;
+}
+
+@media (max-width: 600px) {
+  .App-header {
+    padding: 20px;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  .language-selector button {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+  }
+  
+  button {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+}
