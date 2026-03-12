@@ -42,7 +42,7 @@
 
 | Servicio | Cálculo | Costo Mensual |
 |----------|---------|---------------|
-| **Textract** | 3,000 páginas × $0.0015 | $4.50 |
+| **Textract (AnalyzeDocument)** | 3,000 páginas × $0.05 | $150.00 |
 | **Polly (Neural)** | 3M caracteres × $16/1M | $48.00 |
 | **Lambda Invocations** | 6,000 × $0.20/1M | $0.001 |
 | **Lambda Duration** | 6,000 × 3s × $0.0000166667/GB-s | $0.30 |
@@ -52,9 +52,11 @@
 | **CloudFront Requests** | 10,000 × $0.0075/10K | $0.008 |
 | **API Gateway** | 6,000 × $3.50/1M | $0.021 |
 | **CloudWatch Logs** | 100 MB × $0.50/GB | $0.05 |
-| **TOTAL MENSUAL** | | **$53.06 USD/mes** |
+| **TOTAL MENSUAL** | | **$198.56 USD/mes** |
 
-**Costo por usuario**: $0.053 USD
+**Costo por usuario**: $0.199 USD
+
+**Nota**: Textract AnalyzeDocument con LAYOUT cuesta $0.05/página vs $0.0015/página de DetectDocumentText, pero es necesario para respetar el formato y columnas del texto.
 
 ---
 
