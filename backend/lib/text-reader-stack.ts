@@ -62,7 +62,10 @@ export class TextReaderStack extends cdk.Stack {
     dataBucket.grantReadWrite(textToSpeechLambda);
 
     processImageLambda.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['textract:DetectDocumentText', 'textract:AnalyzeDocument'],
+      actions: [
+        'textract:DetectDocumentText',
+        'textract:AnalyzeDocument'
+      ],
       resources: ['*']
     }));
 
