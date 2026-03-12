@@ -168,6 +168,8 @@ function App() {
     setLoadingMessage(t.generatingAudio);
     
     try {
+      console.log('Generando audio para texto:', text.substring(0, 100));
+      
       const response = await fetch(`${API_URL}/speak`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,17 +179,31 @@ function App() {
         })
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Respuesta de audio:', data);
+      
+      if (!data.audioUrl) {
+        throw new Error('No se recibió URL de audio');
+      }
+      
       setAudioUrl(data.audioUrl);
       
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.src = data.audioUrl;
-          audioRef.current.play();
+          audioRef.current.play().catch(err => {
+            console.error('Error al reproducir audio:', err);
+            alert('Error al reproducir audio. Por favor, presiona play manualmente.');
+          });
         }
       }, 100);
     } catch (err) {
-      alert(t.speakError);
+      console.error('Error en speakText:', err);
+      alert(t.speakError + ': ' + err.message);
     }
     setLoading(false);
     setLoadingMessage('');
