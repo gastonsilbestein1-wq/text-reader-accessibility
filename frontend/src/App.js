@@ -28,6 +28,7 @@ function App() {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startCamera = async () => {
@@ -94,46 +95,11 @@ function App() {
     oscillator.stop(audioContext.currentTime + 0.1);
   };
 
-  const checkImageQuality = (imageData) => {
-    const img = new Image();
-    img.src = imageData;
-    
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      
-      const imageDataObj = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageDataObj.data;
-      
-      // Calcular contraste y nitidez básica
-      let sum = 0;
-      let sumSq = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        sum += brightness;
-        sumSq += brightness * brightness;
-      }
-      
-      const mean = sum / (data.length / 4);
-      const variance = (sumSq / (data.length / 4)) - (mean * mean);
-      const contrast = Math.sqrt(variance);
-      
-      if (contrast < 30) {
-        setImageQuality('low');
-        return false;
-      }
-      
-      setImageQuality('good');
-      return true;
-    };
-  };
-
   const processImage = async () => {
     setLoading(true);
     setLoadingMessage(t.processing);
+    setExtractedText('');
+    setAudioUrl(null);
     
     try {
       const response = await fetch(`${API_URL}/process`, {
@@ -148,6 +114,7 @@ function App() {
         setImageQuality('low');
         alert(t.lowQualityWarning);
         setLoading(false);
+        setLoadingMessage('');
         return;
       }
       
@@ -157,6 +124,7 @@ function App() {
       // Automáticamente generar y reproducir audio
       await speakText(data.text);
     } catch (err) {
+      console.error('Error en processImage:', err);
       alert(t.processError);
       setLoading(false);
       setLoadingMessage('');
@@ -180,7 +148,8 @@ function App() {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
@@ -191,22 +160,25 @@ function App() {
       }
       
       setAudioUrl(data.audioUrl);
+      setLoading(false);
+      setLoadingMessage('');
       
+      // Intentar reproducir automáticamente después de un breve delay
       setTimeout(() => {
         if (audioRef.current) {
-          audioRef.current.src = data.audioUrl;
+          audioRef.current.load();
           audioRef.current.play().catch(err => {
-            console.error('Error al reproducir audio:', err);
-            alert('Error al reproducir audio. Por favor, presiona play manualmente.');
+            console.error('Autoplay bloqueado:', err);
+            // El usuario puede presionar play manualmente
           });
         }
-      }, 100);
+      }, 300);
     } catch (err) {
       console.error('Error en speakText:', err);
       alert(t.speakError + ': ' + err.message);
+      setLoading(false);
+      setLoadingMessage('');
     }
-    setLoading(false);
-    setLoadingMessage('');
   };
 
   const retakePhoto = () => {
@@ -324,9 +296,11 @@ function App() {
                 <audio 
                   ref={audioRef} 
                   controls 
+                  controlsList="nodownload"
                   className="audio-player-large"
                   aria-label="Reproductor de audio"
-                  autoPlay
+                  preload="auto"
+                  src={audioUrl}
                 />
               </div>
             )}

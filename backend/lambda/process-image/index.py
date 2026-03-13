@@ -72,45 +72,55 @@ def extract_text_with_layout(blocks):
     
     # Obtener bloques de layout ordenados por ReadingOrder
     layout_blocks = [b for b in blocks if b['BlockType'] == 'LAYOUT_TEXT']
-    layout_blocks.sort(key=lambda x: x.get('ReadingOrder', 999))
+    
+    if not layout_blocks:
+        # Si no hay bloques de layout, usar método alternativo
+        line_blocks = [b for b in blocks if b['BlockType'] == 'LINE']
+        return extract_text_by_position(line_blocks)
+    
+    # Ordenar por ReadingOrder si existe, sino por posición
+    layout_blocks.sort(key=lambda x: (
+        x.get('ReadingOrder', 999),
+        x['Geometry']['BoundingBox']['Top'],
+        x['Geometry']['BoundingBox']['Left']
+    ))
     
     text_lines = []
     
     for layout_block in layout_blocks:
+        section_lines = []
+        
         # Obtener todos los bloques LINE que pertenecen a este layout
         if 'Relationships' in layout_block:
             for relationship in layout_block['Relationships']:
                 if relationship['Type'] == 'CHILD':
-                    child_lines = []
                     for child_id in relationship['Ids']:
                         if child_id in block_map:
                             child_block = block_map[child_id]
                             if child_block['BlockType'] == 'LINE':
-                                child_lines.append({
+                                section_lines.append({
                                     'text': child_block.get('Text', ''),
-                                    'top': child_block['Geometry']['BoundingBox']['Top']
+                                    'top': child_block['Geometry']['BoundingBox']['Top'],
+                                    'left': child_block['Geometry']['BoundingBox']['Left']
                                 })
-                    
-                    # Ordenar líneas dentro del layout por posición vertical
-                    child_lines.sort(key=lambda x: x['top'])
-                    text_lines.extend([line['text'] for line in child_lines])
-                    
-                    # Agregar espacio entre secciones de layout
-                    if child_lines:
-                        text_lines.append('')
+        
+        # Ordenar líneas dentro del layout por posición (top, luego left)
+        section_lines.sort(key=lambda x: (x['top'], x['left']))
+        
+        # Agregar líneas de esta sección
+        for line in section_lines:
+            if line['text'].strip():
+                text_lines.append(line['text'])
+        
+        # Agregar separación entre secciones si hay contenido
+        if section_lines and text_lines:
+            text_lines.append('')
     
-    # Limpiar líneas vacías múltiples
-    cleaned_lines = []
-    prev_empty = False
-    for line in text_lines:
-        if line.strip():
-            cleaned_lines.append(line)
-            prev_empty = False
-        elif not prev_empty:
-            cleaned_lines.append('')
-            prev_empty = True
+    # Limpiar líneas vacías múltiples al final
+    while text_lines and not text_lines[-1].strip():
+        text_lines.pop()
     
-    return cleaned_lines
+    return text_lines
 
 def extract_text_by_position(line_blocks):
     """

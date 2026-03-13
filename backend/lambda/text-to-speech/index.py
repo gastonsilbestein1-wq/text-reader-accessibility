@@ -2,6 +2,7 @@ import json
 import boto3
 import os
 from datetime import datetime
+from io import BytesIO
 
 polly = boto3.client('polly')
 s3 = boto3.client('s3')
@@ -12,32 +13,103 @@ VOICE_MAP = {
     'es-MX': {'VoiceId': 'Mia', 'LanguageCode': 'es-MX'}
 }
 
-def handler(event, context):
-    try:
-        body = json.loads(event['body'])
-        text = body['text']
-        language = body.get('language', 'en')
+# Límite de caracteres de Polly (dejamos margen de seguridad)
+MAX_CHARS = 2900
+
+def split_text(text, max_length=MAX_CHARS):
+    """
+    Divide el texto en fragmentos respetando límites de oraciones
+    """
+    if len(text) <= max_length:
+        return [text]
+    
+    chunks = []
+    current_chunk = ""
+    
+    # Dividir por párrafos primero
+    paragraphs = text.split('\n')
+    
+    for paragraph in paragraphs:
+        # Si el párrafo es muy largo, dividir por oraciones
+        if len(paragraph) > max_length:
+            sentences = paragraph.replace('!', '.').replace('?', '.').split('.')
+            
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if not sentence:
+                    continue
+                    
+                # Si agregar esta oración excede el límite, guardar chunk actual
+                if len(current_chunk) + len(sentence) + 2 > max_length:
+                    if current_chunk:
+                        chunks.append(current_chunk.strip())
+                    current_chunk = sentence + '. '
+                else:
+                    current_chunk += sentence + '. '
+        else:
+            # Si agregar este párrafo excede el límite, guardar chunk actual
+            if len(current_chunk) + len(paragraph) + 2 > max_length:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = paragraph + '\n'
+            else:
+                current_chunk += paragraph + '\n'
+    
+    # Agregar el último chunk
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+    
+    return chunks
+
+def synthesize_chunks(text_chunks, voice_config):
+    """
+    Sintetiza múltiples fragmentos de texto y los combina
+    """
+    audio_segments = []
+    
+    for i, chunk in enumerate(text_chunks):
+        print(f"Sintetizando fragmento {i+1}/{len(text_chunks)}: {len(chunk)} caracteres")
         
-        # Seleccionar voz según idioma
-        voice_config = VOICE_MAP.get(language, VOICE_MAP['en'])
-        
-        # Sintetizar voz con Polly
         response = polly.synthesize_speech(
-            Text=text,
+            Text=chunk,
             OutputFormat='mp3',
             VoiceId=voice_config['VoiceId'],
             LanguageCode=voice_config['LanguageCode'],
             Engine='neural'
         )
         
-        # Guardar audio en S3
+        audio_segments.append(response['AudioStream'].read())
+    
+    # Combinar todos los segmentos de audio
+    combined_audio = b''.join(audio_segments)
+    return combined_audio
+
+def handler(event, context):
+    try:
+        body = json.loads(event['body'])
+        text = body['text']
+        language = body.get('language', 'en')
+        
+        print(f"Procesando texto de {len(text)} caracteres")
+        
+        # Seleccionar voz según idioma
+        voice_config = VOICE_MAP.get(language, VOICE_MAP['en'])
+        
+        # Dividir texto si es necesario
+        text_chunks = split_text(text)
+        print(f"Texto dividido en {len(text_chunks)} fragmentos")
+        
+        # Sintetizar todos los fragmentos
+        combined_audio = synthesize_chunks(text_chunks, voice_config)
+        
+        # Guardar audio combinado en S3
         bucket_name = os.environ['BUCKET_NAME']
         audio_key = f"audio/{datetime.now().timestamp()}.mp3"
         
         s3.put_object(
             Bucket=bucket_name,
             Key=audio_key,
-            Body=response['AudioStream'].read(),
+            Body=combined_audio,
             ContentType='audio/mpeg'
         )
         
@@ -56,11 +128,14 @@ def handler(event, context):
             },
             'body': json.dumps({
                 'audioUrl': audio_url,
-                'success': True
+                'success': True,
+                'chunks': len(text_chunks),
+                'totalChars': len(text)
             })
         }
     
     except Exception as e:
+        print(f"Error: {str(e)}")
         return {
             'statusCode': 500,
             'headers': {

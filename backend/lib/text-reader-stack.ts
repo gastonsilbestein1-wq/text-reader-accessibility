@@ -50,8 +50,8 @@ export class TextReaderStack extends cdk.Stack {
       runtime: lambda.Runtime.PYTHON_3_11,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lambda/text-to-speech'),
-      timeout: cdk.Duration.seconds(30),
-      memorySize: 512,
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 1024,
       environment: {
         BUCKET_NAME: dataBucket.bucketName
       }
