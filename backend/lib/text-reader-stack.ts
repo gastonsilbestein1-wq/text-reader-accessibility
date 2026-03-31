@@ -33,12 +33,12 @@ export class TextReaderStack extends cdk.Stack {
       autoDeleteObjects: true
     });
 
-    // Lambda para procesar imagen con Textract
+    // Lambda para procesar imagen con Nova Lite 2 (Bedrock)
     const processImageLambda = new lambda.Function(this, 'ProcessImageFunction', {
       runtime: lambda.Runtime.PYTHON_3_11,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lambda/process-image'),
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(60),
       memorySize: 512,
       environment: {
         BUCKET_NAME: dataBucket.bucketName
@@ -62,11 +62,11 @@ export class TextReaderStack extends cdk.Stack {
     dataBucket.grantReadWrite(textToSpeechLambda);
 
     processImageLambda.addToRolePolicy(new iam.PolicyStatement({
-      actions: [
-        'textract:DetectDocumentText',
-        'textract:AnalyzeDocument'
-      ],
-      resources: ['*']
+      actions: ['bedrock:InvokeModel'],
+      resources: [
+        'arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-2-lite-v1:0',
+        'arn:aws:bedrock:us-east-1:*:inference-profile/us.amazon.nova-2-lite-v1:0'
+      ]
     }));
 
     textToSpeechLambda.addToRolePolicy(new iam.PolicyStatement({

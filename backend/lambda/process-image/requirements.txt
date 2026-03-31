@@ -1,1 +1,2 @@
-boto3>=1.26.0
+# boto3 viene incluido en el runtime de Lambda Python 3.11
+# No se necesitan dependencias adicionales
