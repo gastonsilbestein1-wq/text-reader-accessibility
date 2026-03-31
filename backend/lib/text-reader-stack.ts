@@ -63,10 +63,7 @@ export class TextReaderStack extends cdk.Stack {
 
     processImageLambda.addToRolePolicy(new iam.PolicyStatement({
       actions: ['bedrock:InvokeModel'],
-      resources: [
-        'arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-2-lite-v1:0',
-        'arn:aws:bedrock:us-east-1:*:inference-profile/us.amazon.nova-2-lite-v1:0'
-      ]
+      resources: ['*']
     }));
 
     textToSpeechLambda.addToRolePolicy(new iam.PolicyStatement({

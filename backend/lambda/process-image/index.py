@@ -3,7 +3,7 @@ import boto3
 import base64
 import os
 
-bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+bedrock = boto3.client('bedrock-runtime')
 
 # Model ID para Nova Lite 2
 MODEL_ID = 'us.amazon.nova-2-lite-v1:0'
