@@ -24,10 +24,13 @@ SYSTEM_PROMPT = (
     "- Encabezado: nombre del comercio, direccion, fecha, numero de comprobante, cada dato en su propia linea.\n"
     "- Cuerpo: cada item en formato: cantidad x descripcion ... precio\n"
     "- Totales: cada linea de subtotal/descuento/impuesto/total en su propia linea con su valor.\n\n"
-    "[TABLA / ANALISIS / PLANILLA]:\n"
-    "- Encabezados de columna en la primera fila, separados por ' | '.\n"
-    "- Cada fila de datos en una linea separada con los valores bajo sus columnas.\n"
-    "- Ejemplo: 'Concepto | Valor | Unidad' y debajo 'Glucosa | 95 | mg/dL'\n\n"
+    "[TABLA / ANALISIS DE LABORATORIO / PLANILLA CON COLUMNAS]:\n"
+    "IMPORTANTE: Las tablas tienen multiples columnas en paralelo. NUNCA leas todas las celdas de una columna y luego pases a la siguiente. En cambio, lee FILA POR FILA de izquierda a derecha.\n"
+    "- Identifica cuantas columnas tiene la tabla (ej: Determinacion | Resultado | Unidad | Valor de referencia).\n"
+    "- Transcribe los encabezados de columna en la primera linea separados por ' | '.\n"
+    "- Luego transcribe cada fila completa en una sola linea, con todos sus valores separados por ' | '.\n"
+    "- Ejemplo correcto: 'GLUCEMIA | 92 | mg/dl | 70-100'\n"
+    "- Ejemplo INCORRECTO: listar primero todos los nombres, luego todos los valores.\n\n"
     "[FORMULARIO / DOCUMENTO CON CAMPOS]:\n"
     "- Formato 'Campo: Valor' por linea.\n"
     "- Ejemplo: 'Nombre: Juan Garcia' / 'DNI: 12.345.678'"
@@ -60,7 +63,14 @@ def handler(event, context):
                             }
                         },
                         {
-                            "text": "Transcribe el texto de esta imagen."
+                            "text": (
+                                "Transcribe el texto de esta imagen siguiendo estas reglas segun lo que veas:\n"
+                                "- Si es una TABLA DE DATOS (celdas con numeros, codigos, valores cortos como un analisis de laboratorio o factura): "
+                                "lee cada FILA completa de izquierda a derecha, con los valores separados por ' | '. NO leas columna por columna.\n"
+                                "- Si son COLUMNAS DE TEXTO CORRIDO (parrafos largos como en un diario o revista): "
+                                "transcribe la columna izquierda completa de arriba a abajo, luego la columna derecha completa.\n"
+                                "- Si es texto simple sin columnas: transcribelo respetando parrafos y saltos de linea."
+                            )
                         }
                     ]
                 }
