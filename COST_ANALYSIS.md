@@ -1,12 +1,144 @@
 # Análisis de Costos - OCO-NO Text Reader
 
 ## Arquitectura Actual
-- **Extracción de texto**: Amazon Nova Lite 2 (Bedrock) — reemplazó Textract
+- **Extracción de texto**: Amazon Nova 2.0 Lite (Bedrock) — reemplazó Textract
 - **Síntesis de voz**: Amazon Polly Neural (voz Mia, es-MX)
 - **Hosting**: CloudFront + S3
 - **API**: API Gateway + Lambda
 - **Región**: us-east-1
 - **Última actualización**: 31 de Marzo, 2026
+
+---
+
+## Precios Unitarios Reales (us-east-1, on-demand, verificados 31/03/2026)
+
+| Servicio | Precio |
+|----------|--------|
+| **Nova 2.0 Lite - Input tokens** | $0.00033 / 1K tokens |
+| **Nova 2.0 Lite - Output tokens** | $0.00275 / 1K tokens |
+| **Polly Neural** | $0.000016 / carácter ($16 / 1M) |
+| **Lambda** | $0.20 / 1M invocaciones + $0.0000166667 / GB-s |
+| **API Gateway** | $3.50 / 1M requests |
+| **S3 Storage** | $0.023 / GB-mes |
+| **CloudFront Data Transfer** | $0.085 / GB |
+
+---
+
+## Supuestos por foto procesada
+
+| Concepto | Valor | Justificación |
+|----------|-------|---------------|
+| Input tokens Nova | 1,500 tokens | Imagen + system prompt (~900 tokens) + instrucción |
+| Output tokens Nova | 500 tokens | ~375 palabras de texto transcripto |
+| Caracteres Polly | 1,500 chars | Texto transcripto promedio |
+| Lambda duración | 5s × 512MB = 2.5 GB-s | Tiempo de respuesta Bedrock + Polly |
+| API Gateway requests | 2 por foto | 1 `/process` + 1 `/speak` |
+| Audio generado | ~150 KB por foto | MP3 de ~30 segundos |
+
+---
+
+## Costo por foto individual
+
+| Servicio | Cálculo | Costo |
+|----------|---------|-------|
+| Nova 2.0 Lite input | 1.5K tokens × $0.00033 | $0.000495 |
+| Nova 2.0 Lite output | 0.5K tokens × $0.00275 | $0.001375 |
+| Polly Neural | 1,500 chars × $0.000016 | $0.000024 |
+| Lambda (2 funciones) | 2 inv + 5GB-s × $0.0000166667 | $0.000083 |
+| API Gateway | 2 requests × $0.0000035 | $0.000007 |
+| S3 + CloudFront | ~150KB audio | $0.000013 |
+| **TOTAL POR FOTO** | | **~$0.002 USD** |
+
+---
+
+## Escenarios: 100 fotos/usuario/mes
+
+### 1 usuario — 100 fotos/mes
+
+| Servicio | Cálculo | Costo |
+|----------|---------|-------|
+| Nova 2.0 Lite input | 150K tokens × $0.00033 | $0.050 |
+| Nova 2.0 Lite output | 50K tokens × $0.00275 | $0.138 |
+| Polly Neural | 150,000 chars × $0.000016 | $0.002 |
+| Lambda | 200 inv + 500 GB-s × $0.0000166667 | $0.008 |
+| API Gateway | 200 requests | $0.001 |
+| S3 Storage | ~15 MB audio | $0.001 |
+| CloudFront | ~15 MB | $0.001 |
+| **TOTAL MENSUAL** | | **~$0.20 USD/mes** |
+
+---
+
+### 10 usuarios — 1,000 fotos/mes
+
+| Servicio | Cálculo | Costo |
+|----------|---------|-------|
+| Nova 2.0 Lite input | 1.5M tokens × $0.00033 | $0.495 |
+| Nova 2.0 Lite output | 500K tokens × $0.00275 | $1.375 |
+| Polly Neural | 1.5M chars × $0.000016 | $0.024 |
+| Lambda | 2,000 inv + 5,000 GB-s × $0.0000166667 | $0.083 |
+| API Gateway | 2,000 requests | $0.007 |
+| S3 Storage | ~150 MB audio | $0.003 |
+| CloudFront | ~150 MB | $0.013 |
+| **TOTAL MENSUAL** | | **~$2.00 USD/mes** |
+
+**Costo por usuario**: $0.20 USD
+
+---
+
+### 100 usuarios — 10,000 fotos/mes
+
+| Servicio | Cálculo | Costo |
+|----------|---------|-------|
+| Nova 2.0 Lite input | 15M tokens × $0.00033 | $4.95 |
+| Nova 2.0 Lite output | 5M tokens × $0.00275 | $13.75 |
+| Polly Neural | 15M chars × $0.000016 | $0.24 |
+| Lambda | 20,000 inv + 50,000 GB-s × $0.0000166667 | $0.83 |
+| API Gateway | 20,000 requests | $0.07 |
+| S3 Storage | ~1.5 GB audio | $0.035 |
+| CloudFront | ~1.5 GB | $0.128 |
+| **TOTAL MENSUAL** | | **~$20.00 USD/mes** |
+
+**Costo por usuario**: $0.20 USD
+
+---
+
+## Resumen comparativo
+
+| Usuarios | Fotos/mes | Costo total | Costo/usuario | Costo/foto |
+|----------|-----------|-------------|---------------|------------|
+| 1 | 100 | **$0.20** | $0.20 | $0.002 |
+| 10 | 1,000 | **$2.00** | $0.20 | $0.002 |
+| 100 | 10,000 | **$20.00** | $0.20 | $0.002 |
+
+> El costo escala linealmente: **$0.20 por usuario/mes** con 100 fotos, independientemente del volumen.
+> El costo dominante es Nova 2.0 Lite (output tokens = 73% del total por foto).
+
+---
+
+## Desglose por servicio (% del costo total por foto)
+
+| Servicio | Costo/foto | % |
+|----------|-----------|---|
+| Nova 2.0 Lite output tokens | $0.001375 | 69% |
+| Nova 2.0 Lite input tokens | $0.000495 | 25% |
+| Lambda | $0.000083 | 4% |
+| Polly Neural | $0.000024 | 1% |
+| API GW + S3 + CF | $0.000020 | 1% |
+| **Total** | **$0.001997** | 100% |
+
+> Polly es casi gratuito a esta escala. El costo real está en Nova Lite 2 (94% del total).
+
+---
+
+## Recursos activos en la cuenta
+
+| Stack | Proyecto | Estado |
+|-------|----------|--------|
+| `TextReaderStack` | OCO-NO | ✅ Activo |
+| `fiscal-document-processor-dev` | Otro proyecto | ✅ Activo |
+| `CDKToolkit` | Bootstrap CDK | ✅ Necesario |
+
+> No se encontraron recursos huérfanos. Cuenta limpia.
 
 ---
 
