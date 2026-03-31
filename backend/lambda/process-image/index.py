@@ -2,9 +2,9 @@ import json
 import boto3
 import base64
 
-bedrock = boto3.client('bedrock-runtime')
+bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 
-MODEL_ID = 'us.amazon.nova-2-lite-v1:0'
+MODEL_ID = 'amazon.nova-2-lite-v1:0'
 
 SYSTEM_PROMPT = (
     "Eres un transcriptor de documentos. Tu funcion es transcribir el texto visible "
