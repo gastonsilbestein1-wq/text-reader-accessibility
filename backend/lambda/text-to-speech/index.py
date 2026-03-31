@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 from io import BytesIO
 
+import re
+
 polly = boto3.client('polly')
 s3 = boto3.client('s3')
 
@@ -15,6 +17,23 @@ VOICE_MAP = {
 
 # Límite de caracteres de Polly (dejamos margen de seguridad)
 MAX_CHARS = 2900
+
+def clean_for_speech(text):
+    """
+    Convierte texto estructurado (tablas, facturas) a texto natural para Polly.
+    Elimina caracteres de formato que suenan raro al leerlos.
+    """
+    # Reemplazar separadores de tabla " | " por pausa natural
+    text = re.sub(r'\s*\|\s*', ', ', text)
+    # Eliminar líneas que son solo guiones o iguales (separadores de tabla)
+    text = re.sub(r'^[-=_]{3,}\s*$', '', text, flags=re.MULTILINE)
+    # Reemplazar múltiples espacios/tabs (alineación de columnas) por un espacio
+    text = re.sub(r'[ \t]{2,}', ' ', text)
+    # Reemplazar "..." usado para alinear precios por pausa
+    text = re.sub(r'\.{3,}', ', ', text)
+    # Limpiar líneas vacías múltiples
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 def split_text(text, max_length=MAX_CHARS):
     """
@@ -91,6 +110,9 @@ def handler(event, context):
         language = body.get('language', 'en')
         
         print(f"Procesando texto de {len(text)} caracteres")
+        
+        # Limpiar formato estructurado para lectura natural
+        text = clean_for_speech(text)
         
         # Seleccionar voz según idioma
         voice_config = VOICE_MAP.get(language, VOICE_MAP['en'])
