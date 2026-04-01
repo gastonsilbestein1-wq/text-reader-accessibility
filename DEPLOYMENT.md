@@ -1,233 +1,114 @@
-# Guía de Despliegue - OCO-NO Text Reader
+# Guía de Despliegue — OCO-NO
 
-## ✅ Estado del Proyecto
+## Estado Actual
 
-- **Repositorio Git**: ✅ Actualizado y sincronizado
-- **CloudFormation/CDK**: ✅ Configurado y probado
-- **Scripts de despliegue**: ✅ Funcionales y testeados
-- **Última versión desplegada**: https://d3p57ma1npow9v.cloudfront.net
+- **App**: https://d3p57ma1npow9v.cloudfront.net
+- **API**: https://csserh9nu9.execute-api.us-east-1.amazonaws.com/prod/
+- **Stack**: TextReaderStack — us-east-1
+- **Cuenta AWS**: 805472282641
 
-## 🚀 Despliegue en Nuevos Entornos
+## Despliegue desde cero
 
-### Requisitos Previos
+### 1. Requisitos
+```bash
+node --version   # >= 18
+python3 --version # >= 3.11
+aws sts get-caller-identity  # verificar credenciales
+```
 
-1. **AWS CLI configurado**
-   ```bash
-   aws configure
-   # Ingresa: Access Key, Secret Key, Region (us-east-1), Output format (json)
-   ```
-
-2. **Verificar credenciales**
-   ```bash
-   aws sts get-caller-identity
-   ```
-
-3. **Node.js y Python instalados**
-   ```bash
-   node --version  # >= 18
-   python3 --version  # >= 3.11
-   ```
-
-### Pasos de Despliegue
-
-#### 1. Clonar el Repositorio
+### 2. Clonar y desplegar
 ```bash
 git clone https://github.com/gastonsilbestein1-wq/text-reader-accessibility.git
 cd text-reader-accessibility
-```
-
-#### 2. Desplegar Automáticamente
-```bash
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
-El script ejecuta:
-- ✅ Instalación de dependencias (backend y frontend)
-- ✅ Instalación de dependencias de Lambda (boto3)
-- ✅ Build del frontend React
-- ✅ Bootstrap de CDK (primera vez)
-- ✅ Despliegue de infraestructura CloudFormation
-- ✅ Subida del frontend a S3/CloudFront
-- ✅ Invalidación de caché de CloudFront
+### 3. Despliegue manual paso a paso
+```bash
+# Frontend
+cd frontend && npm install && npm run build
 
-#### 3. Obtener URLs
-Al finalizar el despliegue verás:
-```
-🌐 Website URL: https://[tu-cloudfront-id].cloudfront.net
-🔌 API URL: https://[tu-api-id].execute-api.us-east-1.amazonaws.com/prod/
+# Backend
+cd ../backend && npm install && npm run build
+npx cdk bootstrap  # solo primera vez por cuenta/región
+npx cdk deploy --require-approval never
 ```
 
-### Despliegue en Diferentes Regiones
-
-Para desplegar en otra región AWS:
+## Actualizar despliegue existente
 
 ```bash
-# Editar backend/bin/app.ts
-# Cambiar: region: 'us-east-1' por tu región deseada
-
-# Luego desplegar
-./deploy.sh
+git pull origin main
+cd frontend && npm run build
+cd ../backend && npm run build && npx cdk deploy --require-approval never
 ```
 
-### Despliegue en Múltiples Cuentas AWS
+## Recursos desplegados (TextReaderStack)
 
-Para cada cuenta AWS:
+| Recurso | Nombre/ID |
+|---------|-----------|
+| S3 datos | textreaderstack-textreaderdatabucket4441a081-vysqfrtzoh2u |
+| S3 website | textreaderstack-textreaderwebsitebuckete194db75-7p47nhksog9q |
+| Lambda extracción | ProcessImageFunction (Nova 2.0 Lite) |
+| Lambda audio | TextToSpeechFunction (Polly Neural) |
+| API Gateway | csserh9nu9 |
+| CloudFront | d3p57ma1npow9v.cloudfront.net |
 
-1. Configurar perfil AWS
-   ```bash
-   aws configure --profile cuenta-dev
-   aws configure --profile cuenta-prod
-   ```
+## Endpoints API
 
-2. Desplegar con perfil específico
-   ```bash
-   AWS_PROFILE=cuenta-dev ./deploy.sh
-   AWS_PROFILE=cuenta-prod ./deploy.sh
-   ```
+| Método | Path | Función |
+|--------|------|---------|
+| POST | /process | Extrae texto de imagen con Nova 2.0 Lite |
+| POST | /speak | Genera audio MP3 con Polly Neural |
 
-## 🗑️ Eliminar Recursos
+## Notas importantes
 
-Para eliminar todos los recursos de AWS:
+**Bedrock / Nova 2.0 Lite:**
+- Model ID: `us.amazon.nova-2-lite-v1:0` (inference profile cross-region)
+- El inference profile enruta automáticamente entre us-east-1, us-east-2 y us-west-2
+- Los modelos se activan automáticamente al primer uso en cada región
+- IAM policy requiere `bedrock:InvokeModel` con `Resource: *`
+
+**Polly:**
+- Voz es-MX: Mia (Neural)
+- Voz en-US: Joanna (Neural)
+- Textos largos se dividen automáticamente en chunks de 2900 caracteres
+
+## Múltiples entornos
+
+```bash
+# Con perfil AWS específico
+AWS_PROFILE=mi-perfil npx cdk deploy
+
+# En otra región (editar backend/bin/app.ts primero)
+npx cdk deploy --context region=eu-west-1
+```
+
+## Eliminar recursos
 
 ```bash
 chmod +x destroy.sh
 ./destroy.sh
+# o manualmente:
+cd backend && npx cdk destroy --force
 ```
 
-⚠️ **ADVERTENCIA**: Esto eliminará:
-- Stack de CloudFormation
-- Buckets S3 (y su contenido)
-- Lambdas
-- API Gateway
-- CloudFront Distribution
-- Roles IAM
-
-## 📦 Estructura de Recursos Desplegados
-
-### Backend (CloudFormation Stack: TextReaderStack)
-- **2 Buckets S3**:
-  - `TextReaderDataBucket`: Almacena imágenes y audio
-  - `TextReaderWebsiteBucket`: Hosting del frontend
-  
-- **2 Funciones Lambda**:
-  - `ProcessImageFunction`: Extracción de texto con Textract
-  - `TextToSpeechFunction`: Conversión a audio con Polly
-  
-- **API Gateway**: REST API con 2 endpoints
-  - `POST /process`: Procesar imagen
-  - `POST /speak`: Generar audio
-  
-- **CloudFront Distribution**: CDN para el frontend
-  
-- **Roles IAM**: Permisos mínimos necesarios
-
-### Frontend
-- React PWA
-- Desplegado en S3 + CloudFront
-- HTTPS obligatorio
-- Caché optimizado
-
-## 🔧 Configuración de Entornos
-
-### Variables de Entorno
-
-**Frontend** (`frontend/.env.production`):
-```bash
-REACT_APP_API_URL=https://[tu-api-id].execute-api.us-east-1.amazonaws.com/prod/
-```
-
-**Backend** (configurado automáticamente por CDK):
-- `BUCKET_NAME`: Nombre del bucket de datos
-
-### Personalización
-
-Para cambiar nombres de recursos, editar `backend/lib/text-reader-stack.ts`:
-
-```typescript
-const bucket = new s3.Bucket(this, 'MiNombrePersonalizado', {
-  // ...
-});
-```
-
-## 📊 Monitoreo
-
-### CloudWatch Logs
-```bash
-# Ver logs de Lambda
-aws logs tail /aws/lambda/TextReaderStack-ProcessImageFunction --follow
-aws logs tail /aws/lambda/TextReaderStack-TextToSpeechFunction --follow
-```
-
-### Métricas
-- CloudWatch Dashboard: Buscar "TextReaderStack" en la consola AWS
-- Métricas de Lambda: Invocaciones, errores, duración
-- Métricas de API Gateway: Requests, latencia, errores 4xx/5xx
-
-## 🔐 Seguridad
-
-- ✅ HTTPS obligatorio en CloudFront
-- ✅ CORS configurado correctamente
-- ✅ Permisos IAM con principio de mínimo privilegio
-- ✅ Buckets S3 con políticas restrictivas
-- ✅ API Gateway con throttling configurado
-
-## 💰 Costos Estimados
-
-**Por 1000 usuarios/mes**:
-- Textract: ~$1.50 (1000 páginas)
-- Polly: ~$0.40 (100,000 caracteres)
-- Lambda: Gratis (dentro de capa gratuita)
-- S3: ~$0.50
-- CloudFront: ~$1.00
-- **Total estimado**: ~$3.50/mes
-
-## 🆘 Troubleshooting
-
-### Error: "CDKToolkit stack not found"
-```bash
-cd backend
-npx cdk bootstrap
-```
-
-### Error: "Access Denied" en S3
-Verificar permisos IAM del usuario AWS CLI
-
-### Frontend no se actualiza
-```bash
-# Invalidar caché de CloudFront
-aws cloudfront create-invalidation \
-  --distribution-id [TU_DISTRIBUTION_ID] \
-  --paths "/*"
-```
-
-### Lambda timeout
-Aumentar timeout en `backend/lib/text-reader-stack.ts`:
-```typescript
-timeout: cdk.Duration.seconds(60)
-```
-
-## 📝 Notas Importantes
-
-1. **Primera vez**: El bootstrap de CDK puede tardar 5-10 minutos
-2. **CloudFront**: La distribución puede tardar 15-20 minutos en propagarse
-3. **Costos**: Monitorear uso de Textract y Polly para evitar sorpresas
-4. **Límites**: AWS tiene límites de servicio (quotas) que pueden requerir aumento
-
-## 🔄 Actualizaciones
-
-Para actualizar una instalación existente:
+## Monitoreo
 
 ```bash
-git pull origin main
-./deploy.sh
+# Logs Lambda extracción
+aws logs tail /aws/lambda/TextReaderStack-ProcessImageFunction340ACD7C-ASJEnSWqrTfj --follow
+
+# Logs Lambda audio
+aws logs tail /aws/lambda/TextReaderStack-TextToSpeechFunction12183EFB-jNvhhWwpI2bU --follow
 ```
 
-El script detecta automáticamente si es una actualización y solo despliega los cambios.
+## Troubleshooting
 
-## 📞 Soporte
-
-- **Issues**: https://github.com/gastonsilbestein1-wq/text-reader-accessibility/issues
-- **Documentación AWS CDK**: https://docs.aws.amazon.com/cdk/
-- **Documentación Textract**: https://docs.aws.amazon.com/textract/
-- **Documentación Polly**: https://docs.aws.amazon.com/polly/
+| Error | Causa | Solución |
+|-------|-------|---------|
+| `AccessDeniedException` en Bedrock | IAM sin permiso cross-region | Verificar `Resource: *` en policy |
+| `ValidationException: on-demand throughput not supported` | Usando model ID directo | Usar inference profile `us.amazon.nova-2-lite-v1:0` |
+| `TextLengthExceededException` en Polly | Texto > 3000 chars | Ya resuelto con chunking automático |
+| Imagen de baja calidad (falso positivo) | Lambda retorna error | Revisar logs con `aws logs tail` |
+| CDKToolkit not found | CDK no inicializado | `npx cdk bootstrap` |
